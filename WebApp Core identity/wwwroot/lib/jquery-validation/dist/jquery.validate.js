@@ -684,7 +684,28 @@ $.extend( $.validator, {
 		},
 
 		clean: function( selector ) {
-			return $( selector )[ 0 ];
+
+			// Normalize different kinds of inputs into a single DOM element.
+			// - If a jQuery object is passed, return its first element.
+			// - If a DOM element or window is passed, return it as-is.
+			// - If a string is passed, always resolve it as a CSS selector,
+			//   scoped to the current form when available, rather than as HTML.
+			if ( selector && selector.jquery ) {
+				return selector[ 0 ];
+			}
+
+			if ( selector && ( selector.nodeType === 1 || selector === window ) ) {
+				return selector;
+			}
+
+			if ( typeof selector === "string" ) {
+				if ( this.currentForm ) {
+					return $( this.currentForm ).find( selector )[ 0 ];
+				}
+				return $( selector )[ 0 ];
+			}
+
+			return undefined;
 		},
 
 		errors: function() {
@@ -1066,6 +1087,11 @@ $.extend( $.validator, {
 			// If radio/checkbox, validate first element in group instead
 			if ( this.checkable( element ) ) {
 				element = this.findByName( element.name );
+			}
+
+			// Normalize to a single DOM element if a jQuery collection was returned.
+			if ( element && element.jquery ) {
+				element = element[ 0 ];
 			}
 
 			// Always apply ignore filter
