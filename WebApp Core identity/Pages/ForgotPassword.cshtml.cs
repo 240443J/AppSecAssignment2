@@ -106,8 +106,8 @@ namespace WebApp_Core_identity.Pages
 
                     await _userManager.UpdateAsync(user);
 
-                    // Generate reset link
-                    var resetLink = Url.Page("/ResetPassword", null, new { token, email = sanitizedEmail }, Request.Scheme);
+                    // Generate reset link without exposing the email address in the URL
+                    var resetLink = Url.Page("/ResetPassword", null, new { token }, Request.Scheme);
 
                     // Send email
                     await _emailService.SendPasswordResetEmailAsync(sanitizedEmail, resetLink!);
@@ -121,7 +121,7 @@ namespace WebApp_Core_identity.Pages
                         HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
                         HttpContext.Request.Headers["User-Agent"].ToString());
 
-                    _logger.LogInformation("Password reset requested for {Email}", sanitizedEmail);
+                    _logger.LogInformation("Password reset requested for {Email}", MaskEmail(sanitizedEmail));
                 }
                 else
                 {
@@ -129,11 +129,11 @@ namespace WebApp_Core_identity.Pages
                     await _auditService.LogSecurityEventAsync(
                         "Unknown",
                         "PasswordResetAttempt",
-                        $"Password reset attempted for non-existent email: {sanitizedEmail}",
+                        $"Password reset attempted for non-existent email: {MaskEmail(sanitizedEmail)}",
                         HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
                         HttpContext.Request.Headers["User-Agent"].ToString());
 
-                    _logger.LogWarning("Password reset attempted for non-existent email: {Email}", sanitizedEmail);
+                    _logger.LogWarning("Password reset attempted for {Email}", MaskEmail(sanitizedEmail));
                 }
 
                 return RedirectToPage("/ForgotPasswordConfirmation");
@@ -153,6 +153,32 @@ namespace WebApp_Core_identity.Pages
             rng.GetBytes(tokenData);
             return Convert.ToBase64String(tokenData)
                 .Replace("+", "-")
+
+        // Mask email addresses before logging or including them in external locations
+        private string MaskEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return string.Empty;
+            }
+
+            var atIndex = email.IndexOf('@');
+            if (atIndex <= 0)
+            {
+                // Not a valid email format; avoid logging the raw value
+                return "masked";
+            }
+
+            var localPart = email.Substring(0, atIndex);
+            var domainPart = email.Substring(atIndex);
+
+            if (localPart.Length <= 1)
+            {
+                return "*" + domainPart;
+            }
+
+            return localPart[0] + new string('*', localPart.Length - 1) + domainPart;
+        }
                 .Replace("/", "_")
                 .Replace("=", "");
         }
