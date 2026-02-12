@@ -41,6 +41,8 @@ var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"] ?? "587");
      Credentials = new NetworkCredential(fromEmail, appPassword)
       };
 
+    var encodedResetLink = WebUtility.HtmlEncode(resetLink);
+
        var mailMessage = new MailMessage
     {
           From = new MailAddress(fromEmail, fromName),
@@ -70,11 +72,11 @@ var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"] ?? "587");
   <p>We received a request to reset your password for your Fresh Farm Market account.</p>
             <p>Click the button below to reset your password:</p>
             <p style='text-align: center;'>
-                <a href='{resetLink}' class='button'>Reset Password</a>
+                <a href='{encodedResetLink}' class='button'>Reset Password</a>
             </p>
    <p>Or copy and paste this link into your browser:</p>
        <p style='word-break: break-all; background-color: #f0f0f0; padding: 10px; border-radius: 3px;'>
-{resetLink}
+{encodedResetLink}
    </p>
       <div class='warning'>
          <strong>?? Important:</strong>
