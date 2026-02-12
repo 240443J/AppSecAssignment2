@@ -30,7 +30,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     // Enforce unique email
     options.User.RequireUniqueEmail = true;
 })
-.AddEntityFrameworkStores<AuthDbContext>();
+.AddEntityFrameworkStores<AuthDbContext>()
+.AddDefaultTokenProviders();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
@@ -54,7 +55,8 @@ builder.Services.Configure<IdentityOptions>(options =>
 builder.Services.AddAuthentication("MyCookieAuth").AddCookie("MyCookieAuth", options =>
 {
     options.Cookie.Name = "MyCookieAuth";
-    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.LoginPath = "/Login";
+    options.AccessDeniedPath = "/AccessDenied";
     
     // === SESSION TIMEOUT CONFIGURATION ===
     // 1-minute session timeout with sliding expiration (Permanent setting)
@@ -68,6 +70,10 @@ builder.Services.AddAuthentication("MyCookieAuth").AddCookie("MyCookieAuth", opt
 // Authorization Configuration
 builder.Services.AddAuthorization(options =>
 {
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("MyCookieAuth")
+ .RequireAuthenticatedUser()
+.Build();
+        
     options.AddPolicy("MustBelongToHRDepartment",
     policy => policy.RequireClaim("Department", "HR"));
 });
@@ -76,29 +82,32 @@ builder.Services.AddAuthorization(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Login";
+    options.AccessDeniedPath = "/AccessDenied";
     
     // === SESSION SECURITY CONFIGURATION ===
     // 1-minute session timeout with sliding expiration (Permanent setting)
     options.ExpireTimeSpan = TimeSpan.FromMinutes(1);
     options.SlidingExpiration = true;
-    options.Cookie.HttpOnly = true;
+  options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.Cookie.Name = "FreshFarmMarket.Session";
     
-    // Session timeout handling
+// Session timeout handling - redirect to /Login not /Account/Login
     options.Events.OnRedirectToLogin = context =>
     {
         if (context.Request.Path.StartsWithSegments("/api"))
         {
-            context.Response.StatusCode = 401;
+      context.Response.StatusCode = 401;
         }
-        else
-      {
-         context.Response.Redirect(context.RedirectUri + "?timeout=true");
-        }
-      return Task.CompletedTask;
-    };
+else
+        {
+            // Build correct redirect URL
+    var returnUrl = context.Request.Path + context.Request.QueryString;
+       context.Response.Redirect($"/Login?ReturnUrl={Uri.EscapeDataString(returnUrl)}");
+     }
+        return Task.CompletedTask;
+ };
 });
 
 // === SESSION STATE CONFIGURATION ===

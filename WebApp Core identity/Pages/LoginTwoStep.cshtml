@@ -1,0 +1,84 @@
+﻿@page
+@model WebApp_Core_identity.Pages.LoginTwoStepModel
+@{
+    ViewData["Title"] = "2FA Verification";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+  <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+          <h3 class="mb-0">
+ <i class="bi bi-shield-lock"></i> Two-Factor Authentication
+         </h3>
+      </div>
+            <div class="card-body">
+          <div class="alert alert-info">
+        <i class="bi bi-envelope-check"></i>
+  <strong>Check your email!</strong>
+    <p class="mb-0 mt-2">We've sent a 6-digit verification code to your email address. Please enter it below.</p>
+      </div>
+
+  <form method="post" asp-antiforgery="true">
+         @Html.AntiForgeryToken()
+<div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+              <div class="mb-4">
+        <label class="form-label fw-bold">
+          <i class="bi bi-key"></i> Enter OTP Code
+           </label>
+          <input asp-for="OTPInput" 
+     class="form-control form-control-lg text-center" 
+           placeholder="000000"
+   maxlength="6"
+      pattern="[0-9]{6}"
+      inputmode="numeric"
+               autocomplete="one-time-code"
+         style="letter-spacing: 10px; font-size: 24px; font-weight: bold;" />
+                <span asp-validation-for="OTPInput" class="text-danger"></span>
+  </div>
+
+      <div class="alert alert-warning">
+      <i class="bi bi-clock"></i>
+       <strong>Important:</strong>
+          <ul class="mb-0 mt-2">
+            <li>This code expires in <strong>5 minutes</strong></li>
+         <li>Check your spam folder if you don't see the email</li>
+  <li>Do not share this code with anyone</li>
+         </ul>
+            </div>
+
+       <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success btn-lg">
+     <i class="bi bi-check-circle"></i> Verify & Login
+  </button>
+               <a asp-page="/Login" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Back to Login
+  </a>
+     </div>
+          </form>
+              </div>
+     <div class="card-footer text-center text-muted">
+         <small>
+     <i class="bi bi-shield-check"></i> 
+            This extra security step helps protect your account
+  </small>
+     </div>
+            </div>
+ </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script type="text/javascript">
+      // Auto-focus on OTP input
+    document.getElementById('OTPInput')?.focus();
+        
+    // Only allow numbers
+  document.getElementById('OTPInput')?.addEventListener('input', function(e) {
+  this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+}

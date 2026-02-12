@@ -7,7 +7,7 @@ using WebApp_Core_Identity.Services;
 
 namespace WebApp_Core_identity.Pages
 {
-    [Authorize]
+    [Authorize(AuthenticationSchemes = "MyCookieAuth")]
     public class IndexModel : PageModel
     {
         private readonly ILogger<IndexModel> _logger;

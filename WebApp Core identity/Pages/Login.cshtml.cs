@@ -23,17 +23,20 @@ namespace WebApp_Core_identity.Pages
         private readonly UserManager<ApplicationUser> userManager;
         private readonly ILogger<LoginModel> logger;
         private readonly AuditService auditService;
+        private readonly IEmailService _emailService;
 
         public LoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
             ILogger<LoginModel> logger,
-            AuditService auditService)
+            AuditService auditService,
+            IEmailService emailService)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
             this.logger = logger;
             this.auditService = auditService;
+            this._emailService = emailService;
         }
 
         public async Task OnGetAsync()
@@ -150,61 +153,45 @@ namespace WebApp_Core_identity.Pages
 
                     if (identityResult.Succeeded)
                     {
-                        var loggedInUser = await userManager.FindByEmailAsync(sanitizedEmail);
+                        // === 2FA: Generate OTP and redirect to verification page ===
 
-                        // === MULTI-DEVICE LOGIN DETECTION ===
-                        var currentSessionId = HttpContext.Session.Id;
-                        if (!string.IsNullOrEmpty(loggedInUser!.CurrentSessionId) && loggedInUser.CurrentSessionId != currentSessionId)
-                        {
-                            logger.LogWarning("Multi-device login detected for {Email}. Previous session: {OldSession}, New session: {NewSession}",
-                                loggedInUser.Email, loggedInUser.CurrentSessionId, currentSessionId);
+                        // Generate a 6-digit OTP
+                        var otp = new Random().Next(100000, 999999).ToString();
 
-                            TempData["MultiDeviceWarning"] = $"A new login was detected from {HttpContext.Connection.RemoteIpAddress}. " +
-                                $"Your previous session from {loggedInUser.LastLoginIP} has been terminated for security.";
+                        // Save OTP and User details to Session
+                        HttpContext.Session.SetString("OTP", otp);
+                        HttpContext.Session.SetString("AuthUserEmail", sanitizedEmail);
+                        HttpContext.Session.SetString("AuthUserRemember", LModel.RememberMe.ToString());
+                        HttpContext.Session.SetString("OTPTimestamp", DateTime.UtcNow.ToString());
 
-                            // Audit log for multi-device detection
-                            await auditService.LogSecurityEventAsync(
-                                loggedInUser.Id,
-                                "Multi-Device Login",
-                                $"New login detected. Previous IP: {loggedInUser.LastLoginIP}, New IP: {HttpContext.Connection.RemoteIpAddress}",
-                                HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-                                HttpContext.Request.Headers["User-Agent"].ToString());
-                        }
+                        // Send OTP Email
+                        var subject = "?? Your Login OTP - Fresh Farm Market";
+                        var body = $@"
+           <html>
+                 <body style='font-family: Arial, sans-serif;'>
+          <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2 style='color: #28a745;'>?? Fresh Farm Market</h2>
+                 <h3>Your One-Time Password (OTP)</h3>
+            <p>Use the following code to complete your login:</p>
+     <div style='background-color: #f0f0f0; padding: 20px; text-align: center; border-radius: 5px;'>
+           <h1 style='font-size: 32px; letter-spacing: 5px; color: #007bff;'>{otp}</h1>
+      </div>
+    <p style='color: #dc3545;'><strong>?? This code expires in 5 minutes.</strong></p>
+           <p>If you didn't request this code, please ignore this email and ensure your account is secure.</p>
+           <hr>
+     <p style='font-size: 12px; color: #666;'>This is an automated message. Please do not reply.</p>
+            </div>
+ </body>
+      </html>";
 
-                        // Update session tracking
-                        loggedInUser.CurrentSessionId = currentSessionId;
-                        loggedInUser.LastLoginDate = DateTime.UtcNow;
-                        loggedInUser.LastLoginIP = HttpContext.Connection.RemoteIpAddress?.ToString();
-                        await userManager.UpdateAsync(loggedInUser);
+                        await _emailService.SendEmailAsync(sanitizedEmail, subject, body);
 
-                        // Create custom claims
-                        var claims = new List<Claim>
-                        {
-                            new Claim(ClaimTypes.Name, sanitizedEmail),
-                            new Claim(ClaimTypes.Email, sanitizedEmail),
-                            new Claim("Department", "HR"),
-                            new Claim("LoginTime", DateTime.UtcNow.ToString("o")),
-                            new Claim("IP", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown")
-                        };
+                        logger.LogInformation("2FA OTP sent to {Email}", sanitizedEmail);
 
-                        var identity = new ClaimsIdentity(claims, "MyCookieAuth");
-                        ClaimsPrincipal claimsPrincipal = new ClaimsPrincipal(identity);
-                        await HttpContext.SignInAsync("MyCookieAuth", claimsPrincipal);
+                        // Sign out from Identity (we'll sign in properly after OTP verification)
+                        await signInManager.SignOutAsync();
 
-                        logger.LogInformation("User {Email} logged in successfully from IP: {IP} at {Time}",
-                            sanitizedEmail,
-                            HttpContext.Connection.RemoteIpAddress,
-                            DateTime.UtcNow);
-
-                        // === AUDIT LOG: Login Success ===
-                        await auditService.LogLoginAsync(
-                            loggedInUser!.Id,
-                            loggedInUser.Email!,
-                            HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-                            HttpContext.Request.Headers["User-Agent"].ToString(),
-                            true);
-
-                        return RedirectToPage("Index");
+                        return RedirectToPage("LoginTwoStep");
                     }
 
                     if (identityResult.IsLockedOut)

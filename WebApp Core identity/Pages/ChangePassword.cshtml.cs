@@ -8,7 +8,7 @@ using WebApp_Core_Identity.Services;
 
 namespace WebApp_Core_identity.Pages
 {
-    [Authorize]
+    [Authorize(AuthenticationSchemes = "MyCookieAuth")]
     public class ChangePasswordModel : PageModel
     {
    private readonly UserManager<ApplicationUser> _userManager;
@@ -74,99 +74,78 @@ namespace WebApp_Core_identity.Pages
    return Page();
 }
 
-      var user = await _userManager.GetUserAsync(User);
+    var user = await _userManager.GetUserAsync(User);
 if (user == null)
     {
  return RedirectToPage("/Login");
   }
 
-       try
-   {
-           // === CHECK MINIMUM PASSWORD AGE ===
- var (canChange, errorMessage, timeRemaining) = await _passwordAgeService.CanChangePasswordAsync(user);
+    // 1. Check Minimum Age
+    var (canChange, errorMessage, timeRemaining) = await _passwordAgeService.CanChangePasswordAsync(user);
     if (!canChange)
-          {
-       ModelState.AddModelError(string.Empty, errorMessage!);
- _logger.LogWarning("User {Email} attempted to change password before minimum age. Time remaining: {TimeRemaining}", 
-         user.Email, timeRemaining);
-   return Page();
-        }
-
-  // Verify current password
- var isCurrentPasswordValid = await _userManager.CheckPasswordAsync(user, CPModel.CurrentPassword);
-     if (!isCurrentPasswordValid)
     {
-      ModelState.AddModelError("CPModel.CurrentPassword", "Current password is incorrect");
-  return Page();
-       }
-
-   // Check password history (last 2 passwords)
-var passwordHistories = _context.PasswordHistories
-     .Where(ph => ph.UserId == user.Id)
-    .OrderByDescending(ph => ph.CreatedDate)
-  .Take(2)
-     .ToList();
-
-     var passwordHasher = new PasswordHasher<ApplicationUser>();
-      foreach (var history in passwordHistories)
-    {
-       var result = passwordHasher.VerifyHashedPassword(user, history.PasswordHash, CPModel.NewPassword);
-   if (result == PasswordVerificationResult.Success)
-  {
-ModelState.AddModelError("CPModel.NewPassword", "You cannot reuse your last 2 passwords");
+        ModelState.AddModelError(string.Empty, errorMessage!);
+  _logger.LogWarning("User {Email} attempted to change password before minimum age. Time remaining: {TimeRemaining}", 
+   user.Email, timeRemaining);
         return Page();
     }
-  }
 
-        // Change password
-  var changePasswordResult = await _userManager.ChangePasswordAsync(user, CPModel.CurrentPassword, CPModel.NewPassword);
- if (!changePasswordResult.Succeeded)
-      {
-    foreach (var error in changePasswordResult.Errors)
- {
-     ModelState.AddModelError(string.Empty, error.Description);
-  }
-        return Page();
-}
+    // 2. Check Password History (Last 2 passwords)
+    var passwordHistories = _context.PasswordHistories
+      .Where(ph => ph.UserId == user.Id)
+   .OrderByDescending(ph => ph.CreatedDate)
+        .Take(2)
+      .ToList();
 
-// Save old password to history
-      var newPasswordHash = _userManager.PasswordHasher.HashPassword(user, CPModel.NewPassword);
-  _context.PasswordHistories.Add(new PasswordHistory
-   {
-  UserId = user.Id,
-      PasswordHash = user.PasswordHash!, // Save old password
-     CreatedDate = DateTime.UtcNow
-       });
-  await _context.SaveChangesAsync();
+    var passwordHasher = new PasswordHasher<ApplicationUser>();
+    foreach (var history in passwordHistories)
+    {
+     var result = passwordHasher.VerifyHashedPassword(user, history.PasswordHash, CPModel.NewPassword);
+if (result == PasswordVerificationResult.Success)
+     {
+        ModelState.AddModelError("CPModel.NewPassword", "You cannot reuse your last 2 passwords");
+            return Page();
+      }
+    }
 
- // Update user's password hash
-   user.PasswordHash = newPasswordHash;
-     await _userManager.UpdateAsync(user);
+    // 3. FIX: Capture the OLD password hash BEFORE changing it
+    var oldPasswordHash = user.PasswordHash;
 
-  // === UPDATE PASSWORD LAST CHANGED DATE ===
-         await _passwordAgeService.UpdatePasswordChangeDateAsync(user);
+    // 4. Change the password
+    var changePasswordResult = await _userManager.ChangePasswordAsync(user, CPModel.CurrentPassword, CPModel.NewPassword);
+    
+    if (!changePasswordResult.Succeeded)
+    {
+        foreach (var error in changePasswordResult.Errors)
+ModelState.AddModelError(string.Empty, error.Description);
+   return Page();
+    }
 
-// Audit log
-       await _auditService.LogPasswordChangeAsync(
- user.Id,
-   user.Email!,
-       HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-  HttpContext.Request.Headers["User-Agent"].ToString());
-
-         _logger.LogInformation("User {Email} changed password successfully", user.Email);
-
- // Re-sign in with new password
-      await _signInManager.RefreshSignInAsync(user);
-
-      StatusMessage = "Your password has been changed successfully.";
-    return RedirectToPage();
-       }
- catch (Exception ex)
+    // 5. FIX: Save the OLD password to history
+    if (!string.IsNullOrEmpty(oldPasswordHash))
   {
-    _logger.LogError(ex, "Error changing password for user {UserId}", user.Id);
-       ModelState.AddModelError(string.Empty, "An error occurred while changing your password. Please try again.");
-        return Page();
-  }
+      _context.PasswordHistories.Add(new PasswordHistory
+        {
+            UserId = user.Id,
+       PasswordHash = oldPasswordHash, // Save the OLD hash
+            CreatedDate = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync();
+    }
+
+    // 6. Update Password Age & Audit
+    await _passwordAgeService.UpdatePasswordChangeDateAsync(user);
+    await _auditService.LogPasswordChangeAsync(user.Id, user.Email!, 
+        HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown", 
+        HttpContext.Request.Headers["User-Agent"].ToString());
+
+    _logger.LogInformation("User {Email} changed password successfully", user.Email);
+
+    // 7. Refresh Sign-in (Crucial: Do not call UpdateAsync manually after this!)
+    await _signInManager.RefreshSignInAsync(user);
+
+    StatusMessage = "Your password has been changed successfully.";
+return RedirectToPage();
       }
     }
 }
