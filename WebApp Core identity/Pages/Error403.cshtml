@@ -1,0 +1,43 @@
+@page
+@model WebApp_Core_identity.Pages.Error403Model
+@{
+    ViewData["Title"] = "403 - Access Denied";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+    <div class="mb-4">
+       <i class="bi bi-shield-lock-fill text-danger" style="font-size: 8rem;"></i>
+    </div>
+          
+     <h1 class="display-1 fw-bold text-danger">403</h1>
+    <h2 class="mb-4">Access Denied</h2>
+   
+     <p class="lead mb-4">
+     You don't have permission to access this resource.
+   </p>
+      
+  <div class="alert alert-danger" role="alert">
+    <i class="bi bi-exclamation-octagon"></i> 
+    <strong>Access Forbidden</strong><br />
+       You are not authorized to view this page. Please ensure you have the correct permissions.
+   </div>
+
+   <div class="mt-4">
+ <a asp-page="/Login" class="btn btn-primary btn-lg me-2">
+   <i class="bi bi-box-arrow-in-right"></i> Login
+  </a>
+       <a asp-page="/Index" class="btn btn-outline-secondary btn-lg">
+ <i class="bi bi-house-door"></i> Go Home
+    </a>
+   </div>
+  
+ <div class="mt-5">
+     <p class="text-muted">
+      <small>If you believe you should have access, please contact your administrator.</small>
+    </p>
+      </div>
+   </div>
+    </div>
+</div>

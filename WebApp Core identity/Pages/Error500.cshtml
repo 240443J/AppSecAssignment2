@@ -1,0 +1,52 @@
+@page
+@model WebApp_Core_identity.Pages.Error500Model
+@{
+    ViewData["Title"] = "500 - Server Error";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+      <div class="mb-4">
+       <i class="bi bi-exclamation-circle-fill text-danger" style="font-size: 8rem;"></i>
+     </div>
+       
+   <h1 class="display-1 fw-bold text-danger">500</h1>
+ <h2 class="mb-4">Internal Server Error</h2>
+  
+      <p class="lead mb-4">
+        Something went wrong on our end. We're working to fix it!
+    </p>
+    
+    <div class="alert alert-danger" role="alert">
+     <i class="bi bi-bug"></i> 
+   <strong>Server Error</strong><br />
+  An unexpected error occurred while processing your request. Our team has been notified.
+    </div>
+
+      @if (Model.ShowDetails && !string.IsNullOrEmpty(Model.ErrorMessage))
+ {
+     <div class="alert alert-warning mt-3" role="alert">
+     <strong>Error Details (Development Only):</strong><br />
+   <code>@Model.ErrorMessage</code>
+      </div>
+   }
+
+ <div class="mt-4">
+<a asp-page="/Index" class="btn btn-primary btn-lg me-2">
+       <i class="bi bi-house-door"></i> Go Home
+     </a>
+   <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg">
+      <i class="bi bi-arrow-left"></i> Go Back
+    </a>
+      </div>
+     
+  <div class="mt-5">
+   <p class="text-muted">
+      <small>Error ID: @Model.ErrorId</small><br />
+    <small>Time: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</small>
+   </p>
+   </div>
+    </div>
+    </div>
+</div>

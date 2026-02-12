@@ -1,0 +1,151 @@
+﻿@page
+@model WebApp_Core_identity.Pages.LoginModel
+@{
+    ViewData["Title"] = "Login - Fresh Farm Market";
+    var sessionTimeout = HttpContext.Request.Query["timeout"].ToString() == "true";
+ var multiDeviceWarning = TempData["MultiDeviceWarning"]?.ToString();
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center align-items-center">
+   <div class="col-sm-12 col-md-12 col-lg-4">
+       <h1 class="mb-3">Login</h1>
+
+            @if (sessionTimeout)
+            {
+   <div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <i class="bi bi-clock-history"></i> <strong>Session Expired</strong>
+      <p class="mb-0">Your session has timed out due to inactivity. Please log in again.</p>
+   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+     }
+
+ @if (!string.IsNullOrEmpty(multiDeviceWarning))
+   {
+     <div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle"></i> <strong>Security Alert</strong>
+ <p class="mb-0">@multiDeviceWarning</p>
+   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+   }
+
+       <form method="post" id="loginForm" asp-antiforgery="true">
+                @Html.AntiForgeryToken()
+      <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+     @* Hidden field to store the reCAPTCHA token *@
+       <input type="hidden" id="captchaToken" name="captchaToken" />
+
+            <div class="mb-3">
+    <label class="form-label" asp-for="LModel.Email">Email Address</label>
+      <input type="email" asp-for="LModel.Email" class="form-control" required maxlength="100" />
+       <span asp-validation-for="LModel.Email" class="text-danger"></span>
+       </div>
+
+    <div class="mb-3">
+       <label class="form-label" asp-for="LModel.Password">Password</label>
+        <div class="input-group">
+           <input type="password" asp-for="LModel.Password" class="form-control" id="passwordField" required />
+         <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+       <i class="bi bi-eye" id="eyeIcon"></i>
+   </button>
+     </div>
+ <span asp-validation-for="LModel.Password" class="text-danger"></span>
+    </div>
+
+       <div class="mb-3 form-check">
+         <input type="checkbox" asp-for="LModel.RememberMe" class="form-check-input" />
+        <label class="form-check-label" asp-for="LModel.RememberMe">Remember Me?</label>
+     </div>
+
+        <div class="mb-3">
+  <button type="submit" class="btn btn-primary w-100" id="loginBtn">Login</button>
+        </div>
+
+        <div class="text-center">
+     <p><a asp-page="/ForgotPassword" class="text-decoration-none">
+       <i class="bi bi-key"></i> Forgot your password?
+            </a></p>
+            <p>Don't have an account? <a asp-page="/Register">Register here</a></p>
+        </div>
+         </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
+    @* Load Google reCAPTCHA Library *@
+    <script src="https://www.google.com/recaptcha/api.js?render=6LcgHEcsAAAAAJyVNle2SoK4Qf2Q4mBf6m9t_yG5"></script>
+  
+    <script type="text/javascript">
+        var isSubmitting = false; // Prevent double submission
+
+        // === XSS PREVENTION: Input sanitization ===
+        function sanitizeInput(input) {
+            return input.replace(/[<>'"]/g, '');
+  }
+
+   // === PASSWORD VISIBILITY TOGGLE ===
+        document.getElementById('togglePassword').addEventListener('click', function() {
+          var passwordField = document.getElementById('passwordField');
+       var eyeIcon = document.getElementById('eyeIcon');
+
+    if (passwordField.type === 'password') {
+         passwordField.type = 'text';
+       eyeIcon.className = 'bi bi-eye-slash';
+    } else {
+     passwordField.type = 'password';
+            eyeIcon.className = 'bi bi-eye';
+ }
+ });
+
+        // === RECAPTCHA GENERATION ===
+        grecaptcha.ready(function() {
+          grecaptcha.execute('6LcgHEcsAAAAAJyVNle2SoK4Qf2Q4mBf6m9t_yG5', {action: 'login'}).then(function(token) {
+      document.getElementById('captchaToken').value = token;
+    });
+   });
+
+   // === FORM SUBMISSION HANDLING ===
+ document.getElementById('loginForm').addEventListener('submit', function(e) {
+    // Prevent double submission
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+      }
+
+    var loginBtn = document.getElementById('loginBtn');
+         var email = document.querySelector('input[name="LModel.Email"]').value;
+     
+    // Client-side email validation
+ var emailPattern = /^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailPattern.test(email)) {
+           e.preventDefault();
+          alert('Please enter a valid email address');
+        return false;
+ }
+          
+            // Mark as submitting
+   isSubmitting = true;
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Logging in...';
+        });
+
+        // Reset submission flag if page is shown again (e.g., validation error)
+        window.addEventListener('pageshow', function() {
+            isSubmitting = false;
+       var loginBtn = document.getElementById('loginBtn');
+         if (loginBtn) {
+            loginBtn.disabled = false;
+         loginBtn.innerHTML = 'Login';
+        }
+ });
+
+        // === SECURITY: Clear password on page unload ===
+        window.addEventListener('beforeunload', function() {
+            document.getElementById('passwordField').value = '';
+    });
+    </script>
+}

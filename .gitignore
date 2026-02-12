@@ -1,0 +1,55 @@
+# .gitignore for ASP.NET Core Projects
+
+## User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+## Visual Studio
+.vs/
+*.cache
+
+## User Secrets (already excluded by default, but explicit for clarity)
+secrets.json
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.Development.json
+
+## ?? CRITICAL: Never commit production secrets
+appsettings.Production.json
+appsettings.Staging.json
+*.secrets.json
+
+## Database files (if using LocalDB)
+*.mdf
+*.ldf
+
+## NuGet
+*.nupkg
+**/packages/*
+
+## Node (if using npm/node)
+node_modules/
+package-lock.json
+
+## macOS
+.DS_Store
+
+## Rider
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
+!.vscode/tasks.json
+!.vscode/launch.json

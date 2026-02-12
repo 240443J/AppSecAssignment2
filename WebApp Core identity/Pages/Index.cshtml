@@ -1,0 +1,156 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home - Fresh Farm Market";
+}
+
+<div class="container mt-5">
+    @if (Model.CurrentUser != null)
+    {
+   <div class="row">
+<div class="col-md-4 text-center mb-4">
+   @if (!string.IsNullOrEmpty(Model.CurrentUser.PhotoPath))
+ {
+   <img src="@Html.Raw(Model.CurrentUser.PhotoPath)" 
+         alt="Profile Photo" 
+           class="img-fluid rounded-circle mb-3 border border-3 border-success shadow" 
+                style="max-width: 220px; max-height: 220px; object-fit: cover;" />
+  }
+       else
+         {
+   <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mb-3 shadow" 
+     style="width: 220px; height: 220px; margin: 0 auto;">
+  <span style="font-size: 5rem; font-weight: bold;">
+     @Html.Raw(Model.CurrentUser.FullName?.Substring(0, 1).ToUpper() ?? "M")
+           </span>
+      </div>
+       }
+   <h4 class="text-success">@Html.Encode(Model.CurrentUser.FullName)</h4>
+    <p class="text-muted">Member Since @Model.CurrentUser.LockoutEnd?.ToString("MMM yyyy") ?? "2024"</p>
+    </div>
+
+   <div class="col-md-8">
+    <div class="mb-4">
+       <h2 class="display-5">Welcome Back!</h2>
+        <p class="lead text-muted">Your Fresh Farm Market Profile</p>
+          </div>
+
+       <!-- Personal Information Card -->
+      <div class="card shadow-sm mb-4">
+         <div class="card-header bg-success text-white">
+      <h5 class="mb-0"><i class="bi bi-person-circle"></i> Personal Information</h5>
+     </div>
+     <div class="card-body">
+         <div class="row mb-3">
+     <div class="col-md-4 fw-bold text-secondary">Full Name:</div>
+         <div class="col-md-8">@Html.Encode(Model.CurrentUser.FullName)</div>
+           </div>
+
+      <div class="row mb-3">
+      <div class="col-md-4 fw-bold text-secondary">Email:</div>
+       <div class="col-md-8">
+    <span class="badge bg-light text-dark">@Html.Encode(Model.CurrentUser.Email)</span>
+    </div>
+    </div>
+
+   <div class="row mb-3">
+  <div class="col-md-4 fw-bold text-secondary">Gender:</div>
+         <div class="col-md-8">@Html.Encode(Model.CurrentUser.Gender)</div>
+ </div>
+
+   <div class="row mb-3">
+       <div class="col-md-4 fw-bold text-secondary">Mobile Number:</div>
+      <div class="col-md-8">
+            <i class="bi bi-telephone"></i> @Html.Encode(Model.FormattedMobileNo)
+      </div>
+          </div>
+
+       <div class="row mb-3">
+           <div class="col-md-4 fw-bold text-secondary">Delivery Address:</div>
+                 <div class="col-md-8">
+   <address class="mb-0">@Html.Encode(Model.CurrentUser.DeliveryAddress)</address>
+            </div>
+     </div>
+  </div>
+      </div>
+
+       <!-- Secure Payment Information Card -->
+       <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+  <h5 class="mb-0"><i class="bi bi-credit-card"></i> Payment Information (Encrypted)</h5>
+            </div>
+      <div class="card-body">
+       <div class="row mb-2">
+        <div class="col-md-4 fw-bold text-secondary">Credit Card:</div>
+     <div class="col-md-8">
+     <div class="d-flex align-items-center gap-2">
+    <code class="bg-light p-2 rounded" id="cardDisplay">@Html.Encode(Model.MaskedCreditCard)</code>
+   <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleCard" onclick="toggleCardVisibility()">
+    <i class="bi bi-eye" id="eyeIcon"></i> Show
+    </button>
+      </div>
+           <input type="hidden" id="fullCard" value="@Html.Encode(Model.DecryptedCreditCard)" />
+     <small class="text-muted d-block mt-2">
+       <i class="bi bi-shield-lock"></i> This data is encrypted in the database using AES-256
+    </small>
+        </div>
+   </div>
+      </div>
+</div>
+
+     <!-- About Me Card -->
+          <div class="card shadow-sm mb-4">
+  <div class="card-header bg-info text-white">
+ <h5 class="mb-0"><i class="bi bi-chat-quote"></i> About Me</h5>
+         </div>
+        <div class="card-body">
+   <p class="mb-0" style="white-space: pre-wrap;">@Html.Raw(System.Net.WebUtility.HtmlEncode(Model.CurrentUser.AboutMe))</p>
+       </div>
+ </div>
+
+ <div class="alert alert-success" role="alert">
+  <h6 class="alert-heading"><i class="bi bi-shield-check"></i> Security Notice</h6>
+     <p class="mb-0">All sensitive data (credit card) is encrypted in our database. Your information is protected with industry-standard security measures.</p>
+   </div>
+    </div>
+ </div>
+    }
+    else
+    {
+   <div class="text-center py-5">
+    <i class="bi bi-person-x display-1 text-muted"></i>
+ <h1 class="display-4 mt-3">Welcome to Fresh Farm Market</h1>
+       <p class="lead">Please log in to view your profile.</p>
+    <a asp-page="/Login" class="btn btn-success btn-lg mt-3">Login</a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+  <script type="text/javascript">
+        var isCardVisible = false;
+
+        function toggleCardVisibility() {
+   var cardDisplay = document.getElementById('cardDisplay');
+var fullCard = document.getElementById('fullCard').value;
+  var eyeIcon = document.getElementById('eyeIcon');
+          var toggleBtn = document.getElementById('toggleCard');
+
+  if (isCardVisible) {
+     // Hide full card
+       var masked = fullCard.substring(0, 12).replace(/\d/g, '*') + ' ' + fullCard.substring(12);
+    cardDisplay.textContent = masked.replace(/(.{4})/g, '$1 ').trim();
+       eyeIcon.className = 'bi bi-eye';
+  toggleBtn.innerHTML = '<i class="bi bi-eye" id="eyeIcon"></i> Show';
+     isCardVisible = false;
+            } else {
+    // Show full card
+  var formatted = fullCard.replace(/(.{4})/g, '$1 ').trim();
+       cardDisplay.textContent = formatted;
+    eyeIcon.className = 'bi bi-eye-slash';
+       toggleBtn.innerHTML = '<i class="bi bi-eye-slash" id="eyeIcon"></i> Hide';
+   isCardVisible = true;
+            }
+        }
+  </script>
+}
