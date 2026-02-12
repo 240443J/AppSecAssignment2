@@ -46,5 +46,22 @@ namespace WebApp_Core_Identity.Model
         // Password reset properties
         public string? PasswordResetToken { get; set; }
         public DateTime? PasswordResetTokenExpiry { get; set; }
+
+        // === PASSWORD AGE PROPERTIES ===
+        
+        /// <summary>
+        /// Date and time when the password was last changed
+        /// </summary>
+        public DateTime? PasswordLastChangedDate { get; set; }
+
+        /// <summary>
+        /// Indicates if the user must change their password on next login (password expired)
+        /// </summary>
+        public bool MustChangePassword { get; set; } = false;
+
+        /// <summary>
+        /// Date when the user was last warned about password expiration
+        /// </summary>
+        public DateTime? PasswordExpiryWarningDate { get; set; }
     }
 }

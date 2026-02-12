@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using WebApp_Core_Identity.Model;
 using WebApp_Core_Identity.Services;
+using WebApp_Core_Identity.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,10 @@ builder.Services.AddScoped<AuditService>();
 
 // Register Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
+
+// === REGISTER PASSWORD AGE SERVICE ===
+builder.Services.Configure<PasswordAgeSettings>(builder.Configuration.GetSection("PasswordAgeSettings"));
+builder.Services.AddScoped<IPasswordAgeService, PasswordAgeService>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {

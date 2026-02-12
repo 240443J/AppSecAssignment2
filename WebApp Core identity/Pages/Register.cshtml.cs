@@ -212,15 +212,19 @@ DeliveryAddress = InputValidationHelper.SanitizeInput(RModel.DeliveryAddress),
     var result = await userManager.CreateAsync(user, RModel.Password);
  if (result.Succeeded)
   {
+ // === SET INITIAL PASSWORD CHANGE DATE ===
+        user.PasswordLastChangedDate = DateTime.UtcNow;
+    await userManager.UpdateAsync(user);
+
  await userManager.AddToRoleAsync(user, "Admin");
-    await userManager.AddToRoleAsync(user, "HR");
+  await userManager.AddToRoleAsync(user, "HR");
 
 var regIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
      logger.LogInformation("New user registered successfully: {Email} from IP: {IP}", 
    user.Email, regIp);
 
-     // === SAVE INITIAL PASSWORD TO HISTORY ===
-        var passwordHasher = new PasswordHasher<ApplicationUser>();
+// === SAVE INITIAL PASSWORD TO HISTORY ===
+   var passwordHasher = new PasswordHasher<ApplicationUser>();
   var initialPasswordHash = passwordHasher.HashPassword(user, RModel.Password);
    
      using (var context = new AuthDbContext(_configuration))
@@ -235,13 +239,13 @@ UserId = user.Id,
    }
 
      // === AUDIT LOG: Registration ===
-        await auditService.LogRegistrationAsync(
+await auditService.LogRegistrationAsync(
    user.Id,
-       user.Email!,
-      HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+ user.Email!,
+  HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
 HttpContext.Request.Headers["User-Agent"].ToString());
 
-       return RedirectToPage("/Login");
+  return RedirectToPage("/Login");
   }
 
    foreach (var error in result.Errors)
