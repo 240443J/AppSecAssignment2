@@ -22,9 +22,11 @@ public string ErrorId { get; set; } = Guid.NewGuid().ToString();
   ShowDetails = _environment.IsDevelopment();
         ErrorMessage = message;
 
+            var sanitizedPath = HttpContext.Request.Path.ToString().Replace("\r", "").Replace("\n", "");
+
    _logger.LogError("500 Error: Internal server error - ErrorId: {ErrorId}, Path: {Path}, IP: {IP}, Message: {Message}", 
        ErrorId,
- HttpContext.Request.Path,
+            sanitizedPath,
     HttpContext.Connection.RemoteIpAddress,
        message ?? "No details available");
         }
