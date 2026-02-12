@@ -13,8 +13,9 @@ _logger = logger;
 
   public void OnGet()
   {
+     var sanitizedPath = HttpContext.Request.Path.ToString().Replace("\r", string.Empty).Replace("\n", string.Empty);
      _logger.LogWarning("403 Error: Access denied - Path: {Path}, User: {User}, IP: {IP}", 
-      HttpContext.Request.Path,
+      sanitizedPath,
      User.Identity?.Name ?? "Anonymous",
      HttpContext.Connection.RemoteIpAddress);
         }
