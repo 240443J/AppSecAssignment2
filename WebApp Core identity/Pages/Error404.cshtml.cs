@@ -13,9 +13,13 @@ namespace WebApp_Core_identity.Pages
 
 public void OnGet()
         {
-         _logger.LogWarning("404 Error: Page not found - Path: {Path}, IP: {IP}", 
-       HttpContext.Request.Path, 
-       HttpContext.Connection.RemoteIpAddress);
+            var safePath = HttpContext.Request.Path.ToString()
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
+            _logger.LogWarning("404 Error: Page not found - Path: {Path}, IP: {IP}",
+                safePath,
+                HttpContext.Connection.RemoteIpAddress);
         }
     }
 }
